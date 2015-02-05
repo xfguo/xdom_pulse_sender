@@ -25,6 +25,7 @@ reg		odom_pulse_i	;
 reg		xdom_clk_i	;
 wire		xdom_pulse_o	;
 wire		busy_o		;
+wire		err_o		;
 
 xdom_pulse_sender uut (
 	.grst_i		(	grst_i		),
@@ -32,7 +33,8 @@ xdom_pulse_sender uut (
 	.odom_pulse_i	(	odom_pulse_i	),
 	.xdom_clk_i	(	xdom_clk_i	),
 	.xdom_pulse_o	(	xdom_pulse_o	),
-	.busy_o		(	busy_o		)
+	.busy_o		(	busy_o		),
+	.err_o		(	err_o		)
 );
 
 parameter ODOM_PERIOD = 10;

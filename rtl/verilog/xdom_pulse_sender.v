@@ -39,6 +39,7 @@ reg		odom_pulse_delay_r;
 reg		odom_pulse_keeper_r;
 reg	[1:0]	odom_feedback_double_flips_r	;
 reg		err_r;
+reg		odom_pulse_gen_r;
 
 /* cross-domain signals */
 wire		xdom_pulse_en;
@@ -49,20 +50,27 @@ reg	[1:0]	xdom_double_flips_r		;
 reg		xdom_pulse_en_delay_r		;
 reg		xdom_pulse_gen_r		;
 
-/* latch input pulse for one cycle
- * this can avoid setup issue when o-clk is slower then x-clk.
- */
+/* latch input pulse for one cycle */
 always @(posedge odom_clk_i or posedge grst_i)
 	if (grst_i)
 		odom_pulse_delay_r <= 1'b0;
 	else
 		odom_pulse_delay_r <= odom_pulse_i;
 
+/* detect pos-edge of odm_pulse_i */
+always @(posedge odom_clk_i or posedge grst_i)
+	if (grst_i)
+		odom_pulse_gen_r <= 1'b0;
+	else if ((odom_pulse_i == 1'b1) && (odom_pulse_delay_r == 1'b0))
+		odom_pulse_gen_r <= 1'b1;
+	else
+		odom_pulse_gen_r <= 1'b0;
+
 /* keep input pulse signal until feedback signal cancel it */
 always @(posedge odom_clk_i or posedge grst_i)
 	if (grst_i)
 		odom_pulse_keeper_r <= 1'b0;
-	else if (odom_pulse_keeper_r == 1'b0 && odom_pulse_delay_r == 1'b1)
+	else if (odom_pulse_keeper_r == 1'b0 && (odom_pulse_gen_r == 1'b1))
 		odom_pulse_keeper_r <= 1'b1;
 	else if (odom_pulse_keeper_r == 1'b1 && odom_pulse_safe_cancel == 1'b1)
 		odom_pulse_keeper_r <= 1'b0;
@@ -70,14 +78,14 @@ always @(posedge odom_clk_i or posedge grst_i)
 		odom_pulse_keeper_r <= odom_pulse_keeper_r;
 
 /* busy signal */
-assign busy_o = odom_pulse_keeper_r | odom_pulse_i;
+assign busy_o = odom_pulse_keeper_r | odom_pulse_i | odom_pulse_safe_cancel;
 
 /* a new request must wait until last is finished */
 always @(posedge odom_clk_i or posedge grst_i)
 	if (grst_i)
-		err_r = 1'b0;
+		err_r <= 1'b0;
 	else 
-		err_r = (odom_pulse_keeper_r == 1'b1) && (odom_pulse_i == 1'b1);
+		err_r <= (odom_pulse_keeper_r == 1'b1) && (odom_pulse_i == 1'b1);
 
 assign err_o = err_r;
 
